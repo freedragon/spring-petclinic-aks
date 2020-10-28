@@ -20,6 +20,23 @@ You can then access petclinic here: http://localhost:8080/
 ![Spring Petclinic Microservices screenshot](./docs/application-screenshot.png?lastModify=1596391473)
 
 
+## Pre-requisites
+
+AKS cluster with ACR(Azure Container Registry) should be deployed and avaialbe to config spirng-petclicic application.
+Please refer to following URLs to deploy AKS cluster and develop application with Helm:
+
+
+- [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/)
+
+- [Quickstart: Deploy an Azure Kubernetes Service cluster using the Azure CLI](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough)
+
+- [Quickstart: Deploy an Azure Kubernetes Service cluster using PowerShell](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-powershell)
+
+- [Quickstart: Deploy an Azure Kubernetes Service (AKS) cluster using the Azure portal](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-portal)
+
+- [Quickstart: Deploy an Azure Kubernetes Service (AKS) cluster using an ARM template](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-rm-template)
+
+- [Quickstart: Develop on Azure Kubernetes Service (AKS) with Helm](https://docs.microsoft.com/en-us/azure/aks/quickstart-helm)
 
 ## Compiling and pushing to AKS (Azure Kubernetes Services)
 
@@ -32,13 +49,13 @@ You need to define your target Docker registry. Make sure you're already logged 
 Setup an env varible to target your Docker registry. If you're targeting Docker hub, simple provide your username, for example:
 
 ```
-export REPOSITORY_PREFIX=odedia
+export REPOSITORY_PREFIX=privateacrname
 ```
 
 For other Docker registries, provide the full URL to your repository, for example:
 
 ```
-export REPOSITORY_PREFIX=harbor.myregistry.com/demo
+export REPOSITORY_PREFIX=privateacrname.azurecr.io/petclinic
 ```
 
 One of the neat features in Spring Boot 2.3 is that it can leverage [Cloud Native Buildpacks](https://buildpacks.io) and [Paketo Buildpacks](https://paketo.io) to build production-ready images for us. Since we also configured the `spring-boot-maven-plugin` to use `layers`, we'll get optimized layering of the various components that build our Spring Boot app for optimal image caching. What this means in practice is that if we simple change a line of code in our app, it would only require us to push the layer containing our code and not the entire uber jar. To build all images and pushing them to your registry, run:
@@ -52,6 +69,7 @@ Since these are standalone microservices, you can also `cd` into any of the proj
 You should now have all your images in your Docke registry. It might be good to make sure you can see them available.
 
 Make sure you're targeting your Kubernetes cluster
+
 
 ### Setting things up for Monitoring (Wavefront)
 
