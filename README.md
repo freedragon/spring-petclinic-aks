@@ -22,6 +22,14 @@ You can then access petclinic here: http://localhost:8080/
 
 ## Pre-requisites
 
+You need JDK 11 (instead of JDK 8) to build spring-petclinit-cloud. Please install JDK 11.
+
+```
+sudo add-apt-repository ppa:openjdk-r/ppa
+sudo apt-get update
+sudo apt install openjdk-11-jdk
+```
+
 AKS cluster with ACR(Azure Container Registry) should be deployed and avaialbe to config spirng-petclicic application.
 Please refer to following URLs to deploy AKS cluster and develop application with Helm:
 
@@ -37,6 +45,14 @@ Please refer to following URLs to deploy AKS cluster and develop application wit
 - [Quickstart: Deploy an Azure Kubernetes Service (AKS) cluster using an ARM template](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-rm-template)
 
 - [Quickstart: Develop on Azure Kubernetes Service (AKS) with Helm](https://docs.microsoft.com/en-us/azure/aks/quickstart-helm)
+
+Also, Helm v3 is preferred. Please setup or upgrade helm using following commandline:
+
+```
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 > get_helm.sh
+chmod 700 get_helm.sh
+./get_helm.sh
+```
 
 ## Compiling and pushing to AKS (Azure Kubernetes Services)
 
@@ -57,6 +73,18 @@ For other Docker registries, provide the full URL to your repository, for exampl
 ```
 export REPOSITORY_PREFIX=privateacrname.azurecr.io/petclinic
 ```
+
+To authenticate with ACR from build machine, you need to use docker command line as below. From [Admin Account](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-authentication#admin-account) you can find way to obtain username and password to authenticate with ACR using docker command:
+
+```
+docker login <ACR-NAME>.azurecr.io -u <ACR-NAME> -p <ACR-ACCESS-KEY>
+```
+
+Also, ACR provides number of different methods to authenticate. Please refer to [Authenticate with an Azure container registry](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-authentication).
+
+
+When you're using Azure Container Registry (ACR) with Azure Kubernetes Service (AKS), an authentication mechanism needs to be established. This operation is implemented as part of the CLI and Portal experience by granting the required permissions to your ACR. [Authenticate with Azure Container Registry from Azure Kubernetes Service](https://docs.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?toc=/azure/container-registry/toc.json&bc=/azure/container-registry/breadcrumb/toc.json) provides examples for configuring authentication between these two Azure services.
+
 
 One of the neat features in Spring Boot 2.3 is that it can leverage [Cloud Native Buildpacks](https://buildpacks.io) and [Paketo Buildpacks](https://paketo.io) to build production-ready images for us. Since we also configured the `spring-boot-maven-plugin` to use `layers`, we'll get optimized layering of the various components that build our Spring Boot app for optimal image caching. What this means in practice is that if we simple change a line of code in our app, it would only require us to push the layer containing our code and not the entire uber jar. To build all images and pushing them to your registry, run:
 
