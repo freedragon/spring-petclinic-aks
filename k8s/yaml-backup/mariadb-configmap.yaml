@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-config
+  labels:
+    app: spring-petclinic
+data:
+  hostinfo: pc-mariadb.mariadb.database.azure.com:3306
+
