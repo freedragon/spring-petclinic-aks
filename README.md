@@ -1,4 +1,4 @@
-# Distributed version of the Spring PetClinic - adapted for Cloud Foundry and Kubernetes 
+# Distributed version of the Spring PetClinic - configuration guide with AKS 
 
 [![Build Status](https://travis-ci.org/spring-petclinic/spring-petclinic-cloud.svg?branch=master)](https://travis-ci.org/spring-petclinic/spring-petclinic-cloud/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -21,106 +21,9 @@ You can then access petclinic here: http://localhost:8080/
 
 
 
+## Compiling and pushing to AKS (Azure Kubernetes Services)
 
-## Compiling and pushing to Cloud Foundry:
-
-The samples below are using Tanzu Application Service (previously Pivotal Cloud Foundry) as the target Cloud Foundry deployment, some adjustments may be needed for other Cloud Foundry distributions.
-
-Please make sure you have the latest `cf` cli installed: https://docs.cloudfoundry.org/cf-cli/install-go-cli.html  
-For more information on Tanzu Application Service, see: https://docs.pivotal.io/application-service/2-10/overview/dev.html  
-For a list of available Cloud Foundry distributions, see: https://www.cloudfoundry.org/certified-platforms/  
-For local testing and development, you can use PCF Dev: https://docs.pivotal.io/pcf-dev/  
-
-This application uses Wavefront as a SaaS that can provide free Spring Boot monitoring and Open Tracing for your application. If you'd like to remove the Wavefront integration, please remove the `wavefront` user-provided service reference from [manifest.yml](./manifest.yml). 
-
-Otherwise, generate a free wavefront token by running one of the apps, for example:
-
-```bash
-cd spring-petclinic-api-gateway
-mvn spring-boot:run
-```
-
-You will see something like this in the logs:
-
-```
-A Wavefront account has been provisioned successfully and the API token has been saved to disk.
-
-To share this account, make sure the following is added to your configuration:
-
-	management.metrics.export.wavefront.api-token=2e41f7cf-1111-2222-3333-7397a56113ca
-	management.metrics.export.wavefront.uri=https://wavefront.surf
-
-Connect to your Wavefront dashboard using this one-time use link:
-https://wavefront.surf/us/AAA4s5f8xJ9yD
-
-```
-
-You free account has now been created.
-
-Create a user-provided service for Wavefront using the data above. For example:
-
-```
-cf cups -p '{"uri": "https://wavefront.surf", "api-token": "2e41f7cf-1111-2222-3333-7397a56113ca", "application-name": "spring-petclinic-cloudfoundry", "fremium": "true"}' wavefront
-```
-If your operator deployed the wavefront proxy in your Cloud Foundry environment, point the URI to the proxy instead. You can obtain the value of the IP and port by creating a service key of the wavefront proxy and viewing the resulting JSON file. 
-
-Contine with creating the services and deploying the application's microservices. A sample is available at `scripts/deployToCloudFoundry.sh`. Note that some of the services' plans may be different in your environment, so please review before executing. For example, you want want to fork the [spring-petclinic-cloud-config](https://github.com/spring-petclinic/spring-petclinic-cloud-config.git) repository if you want to make changes to the configuration.
-
-```
-echo "Creating Required Services..."
-{
-  cf create-service -c '{ "git": { "uri": "https://github.com/spring-petclinic/spring-petclinic-cloud-config.git", "periodic": true }, "count": 3 }' p.config-server standard config &
-  cf create-service p.service-registry standard registry & 
-  cf create-service p.mysql db-small customers-db &
-  cf create-service p.mysql db-small vets-db &
-  cf create-service p.mysql db-small visits-db &
-  sleep 5
-} &> /dev/null
-until [ `cf service config | grep -c "succeeded"` -ge 1  ] && [ `cf service registry | grep -c "succeeded"` -ge 1  ] && [ `cf service customers-db | grep -c "succeeded"` -ge 1  ] && [ `cf service vets-db | grep -c "succeeded"` -ge 1  ] && [ `cf service visits-db | grep -c "succeeded"` -ge 1  ]
-do
-  echo -n "."
-done
-
-mvn clean package -Pcloud
-cf push --no-start
-
-cf add-network-policy api-gateway --destination-app vets-service --protocol tcp --port 8080
-cf add-network-policy api-gateway --destination-app customers-service --protocol tcp --port 8080
-cf add-network-policy api-gateway --destination-app visits-service --protocol tcp --port 8080
-
-cf start vets-service & cf start visits-service & cf start customers-service & cf start api-gateway &
-```
-
-You can now access your application by querying the route for the `api-gateway`:
-
-```
-✗ cf apps
-Getting apps in org pet-clinic / space pet-clinic as user@email.com...
-OK
-
-name                requested state   instances   memory   disk   urls
-api-gateway         started           1/1         1G       1G     api-gateway.apps.mysite.com
-customers-service   started           1/1         1G       1G     customers-service.apps.internal
-vets-service        started           1/1         1G       1G     vets-service.apps.internal
-visits-service      started           1/1         1G       1G     visits-service.apps.internal
-
-```
-
-Access your route (like `api-gateway.apps.mysite.com` above) to see the application.
-
-Access the one-time URL you received when bootstraping Wavefront to see Zipkin traces and other monitoring of your microservices:
-
-![Wavefront dashboard scree](./docs/wavefront-summary.png)
-
-Since we've included `brave.mysql8` in our `pom.xml`, the traces even show the various DB queries traces:
-
-![Wavefront dashboard scree](./docs/wavefront-traces.png)
-
-
-
-## Compiling and pushing to Kubernetes
-
-This get a little bit more complicated when deploying to Kubernetes, since we need to manage Docker images, exposing services and more yaml. But we can pull through!
+We need to manage Docker images, exposing services and more yaml.
 
 ### Choose your Docker registry
 
@@ -150,12 +53,54 @@ You should now have all your images in your Docke registry. It might be good to 
 
 Make sure you're targeting your Kubernetes cluster
 
+### Setting things up for Monitoring (Wavefront)
+
+This application uses Wavefront as a SaaS that can provide free Spring Boot monitoring and Open Tracing for your application. If you'd like to remove the Wavefront integration, please remove the `wavefront` user-provided service reference from [manifest.yml](./manifest.yml). 
+
+Otherwise, generate a free wavefront token by running one of the apps, for example:
+
+```bash
+cd spring-petclinic-api-gateway
+mvn spring-boot:run
+```
+
+You will see something like this in the logs:
+
+```
+A Wavefront account has been provisioned successfully and the API token has been saved to disk.
+
+To share this account, make sure the following is added to your configuration:
+
+	management.metrics.export.wavefront.api-token=2e41f7cf-1111-2222-3333-7397a56113ca
+	management.metrics.export.wavefront.uri=https://wavefront.surf
+
+Connect to your Wavefront dashboard using this one-time use link:
+https://wavefront.surf/us/AAA4s5f8xJ9yD
+
+```
+
+You free account has now been created.
+
+Access the one-time URL you received when bootstraping Wavefront to see Zipkin traces and other monitoring of your microservices:
+
+![Wavefront dashboard scree](./docs/wavefront-summary.png)
+
+Since we've included `brave.mysql8` in our `pom.xml`, the traces even show the various DB queries traces:
+
+![Wavefront dashboard scree](./docs/wavefront-traces.png)
+
 ### Setting things up in Kubernetes
 
 Create the namespace for Spring petclinic:
 
 ```
 kubectl apply -f k8s/init-namespace/ 
+```
+
+You can use following command to set the default namespace to newly created namespace (spring-petclinic):
+
+```
+kubectl config set-context --current --namespace spring-petclinic
 ```
 
 Create a Kubernetes secret to store the URL and API Token of Wavefront (replace values with your own real ones):
@@ -173,7 +118,7 @@ kubectl apply -f k8s/init-services
 Verify the services are available:
 
 ```
-✗ kubectl get svc -n spring-pet-clinic
+✗ kubectl get svc -n spring-petclinic
 NAME                TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
 api-gateway         LoadBalancer   10.7.250.24    <pending>     80:32675/TCP        36s
 customers-service   ClusterIP      10.7.245.64    <none>        8080/TCP            36s
@@ -185,7 +130,7 @@ wavefront-proxy     ClusterIP      10.7.253.85    <none>        2878/TCP,9411/TC
 Verify the wavefront proxy is running:
 
 ```
-✗ kubectl get pods -n spring-pet-clinic
+✗ kubectl get pods -n spring-petclinic
 NAME                              READY   STATUS    RESTARTS   AGE
 wavefront-proxy-dfbd4b695-fdd6t   1/1     Running   0          36s
 
@@ -209,9 +154,9 @@ Deploy the databases:
 ```
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
-helm install vets-db-mysql bitnami/mysql --namespace spring-pet-clinic --version 6.14.3 --set db.name=service_instance_db
-helm install visits-db-mysql bitnami/mysql --namespace spring-pet-clinic  --version 6.14.3 --set db.name=service_instance_db
-helm install customers-db-mysql bitnami/mysql --namespace spring-pet-clinic  --version 6.14.3 --set db.name=service_instance_db
+helm install vets-db-mysql bitnami/mysql --namespace spring-petclinic --version 6.14.3 --set db.name=service_instance_db
+helm install visits-db-mysql bitnami/mysql --namespace spring-petclinic  --version 6.14.3 --set db.name=service_instance_db
+helm install customers-db-mysql bitnami/mysql --namespace spring-petclinic  --version 6.14.3 --set db.name=service_instance_db
 ```
 
 ### Deploying the application
@@ -226,7 +171,7 @@ Our deployment YAMLs have a placeholder called `REPOSITORY_PREFIX` so we'll be a
 Verify the pods are deployed:
 
 ```bash
-✗ kubectl get pods -n spring-pet-clinic 
+✗ kubectl get pods -n spring-petclinic 
 NAME                                 READY   STATUS    RESTARTS   AGE
 api-gateway-585fff448f-q45jc         1/1     Running   0          4m20s
 customers-db-mysql-master-0          1/1     Running   0          11m
@@ -244,7 +189,7 @@ wavefront-proxy-dfbd4b695-fdd6t      1/1     Running   0          14m
 Get the `EXTERNAL-IP` of the API Gateway:
 
 ```
-✗ kubectl get svc -n spring-pet-clinic api-gateway 
+✗ kubectl get svc -n spring-petclinic api-gateway 
 NAME          TYPE           CLUSTER-IP    EXTERNAL-IP      PORT(S)        AGE
 api-gateway   LoadBalancer   10.7.250.24   34.1.2.22   80:32675/TCP   18m
 ```
@@ -254,10 +199,6 @@ You can now brose to that IP in your browser and see the application running.
 You should also see monitoring and traces from Wavefront under the application name `spring-petclinic-k8s`:
 
 ![Wavefront dashboard scree](./docs/wavefront-k8s.png)
-
-
-
-
 
 ## Starting services locally without Docker
 
