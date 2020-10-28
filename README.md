@@ -155,33 +155,6 @@ Create a Kubernetes secret to store the URL and API Token of Wavefront (replace 
 kubectl create secret generic wavefront -n spring-petclinic --from-literal=wavefront-url=https://wavefront.surf --from-literal=wavefront-api-token=2e41f7cf-1111-2222-3333-7397a56113ca
 ```
 
-Create the Wavefront proxy pod, and the various Kubernetes services that will be used later on by our deployments:
-
-```
-kubectl apply -f k8s/init-services
-```
-
-Verify the services are available:
-
-```
-✗ kubectl get svc -n spring-petclinic
-NAME                TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
-api-gateway         LoadBalancer   10.7.250.24    <pending>     80:32675/TCP        36s
-customers-service   ClusterIP      10.7.245.64    <none>        8080/TCP            36s
-vets-service        ClusterIP      10.7.245.150   <none>        8080/TCP            36s
-visits-service      ClusterIP      10.7.251.227   <none>        8080/TCP            35s
-wavefront-proxy     ClusterIP      10.7.253.85    <none>        2878/TCP,9411/TCP   37s
-```
-
-Verify the wavefront proxy is running:
-
-```
-✗ kubectl get pods -n spring-petclinic
-NAME                              READY   STATUS    RESTARTS   AGE
-wavefront-proxy-dfbd4b695-fdd6t   1/1     Running   0          36s
-
-```
-
 ### Settings up databases with helm
 
 We'll now need to deploy our databases. For that, we'll use helm. You'll need helm 3 and above since we're not using Tiller in this deployment.
@@ -195,7 +168,9 @@ standard (default)   kubernetes.io/gce-pd   6h11m
 
 ```
 
-Deploy the databases:
+If you are going to use pre-deployed and accessible MySQL/MariDB, please skip following part.
+
+(Optional) Deploy the databases:
 
 ```
 helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -230,6 +205,33 @@ visits-db-mysql-master-0             1/1     Running   0          11m
 visits-db-mysql-slave-0              1/1     Running   0          11m
 visits-service-654fffbcc7-zj2jw      1/1     Running   0          4m2s
 wavefront-proxy-dfbd4b695-fdd6t      1/1     Running   0          14m
+```
+
+Create the Wavefront proxy pod, and the various Kubernetes services:
+
+```
+kubectl apply -f k8s/init-services
+```
+
+Verify the services are available:
+
+```
+✗ kubectl get svc -n spring-petclinic
+NAME                TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
+api-gateway         LoadBalancer   10.7.250.24    <pending>     80:32675/TCP        36s
+customers-service   ClusterIP      10.7.245.64    <none>        8080/TCP            36s
+vets-service        ClusterIP      10.7.245.150   <none>        8080/TCP            36s
+visits-service      ClusterIP      10.7.251.227   <none>        8080/TCP            35s
+wavefront-proxy     ClusterIP      10.7.253.85    <none>        2878/TCP,9411/TCP   37s
+```
+
+Verify the wavefront proxy is running:
+
+```
+✗ kubectl get pods -n spring-petclinic
+NAME                              READY   STATUS    RESTARTS   AGE
+wavefront-proxy-dfbd4b695-fdd6t   1/1     Running   0          36s
+
 ```
 
 Get the `EXTERNAL-IP` of the API Gateway:
